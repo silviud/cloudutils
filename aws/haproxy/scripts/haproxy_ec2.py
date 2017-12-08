@@ -1,14 +1,31 @@
 from jinja2 import Template
 from hashlib import md5
 from sys import exit
+from boto import 
 
 
-def search_ec2():
+def search_ec2(group_name, state='running'):
+
+    servers = []
     print "Searching EC2 for servers"
-    servers = [
-            {'server_ip': '192.168.0.1', 'instance_id': 'i-19216801'},
-            {'server_ip': '192.168.0.2', 'instance_id': 'i-19216802'}
-    ]
+    c = boto.connect_ec2()
+
+    for r in c.get_all_instances():
+        for instance in r.instances:
+            if instance.state == state:
+                for g in instance.groups:
+                    if g.name == group_name:
+                        servers.append(
+                                {
+                                    'server_ip': instance.ip_address,
+                                    'instance_id': instance.id
+                                }
+                        )
+
+    # servers = [
+            # {'server_ip': '192.168.0.1', 'instance_id': 'i-19216801'},
+            # {'server_ip': '192.168.0.2', 'instance_id': 'i-19216802'}
+    # ]
 
     return servers
 
@@ -50,7 +67,7 @@ def write_file(content, location):
 
 def main():
     try:
-        servers = search_ec2()
+        servers = search_ec2('WEB')
         haproxy_config = 'haproxy.cfg'
         current_content = read_file(haproxy_config)
         current_md5 = calculate_md5(current_content)
